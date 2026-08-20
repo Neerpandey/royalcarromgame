@@ -727,6 +727,24 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     setPieces([...currentPieces]);
 
     // 6. Check Victory / Board Clear
+    const remainingWhite = currentPieces.filter((p) => !p.isPocketed && p.type === 'white').length;
+    const remainingBlack = currentPieces.filter((p) => !p.isPocketed && p.type === 'black').length;
+    
+    // Win if assigned color is cleared
+    if (mode === '1v1' || mode === '2v2' || mode === 'vs_bot') {
+      if (remainingWhite === 0 || remainingBlack === 0) {
+        // Find players of that color and give them a massive completion bonus to guarantee win
+        const winningCoin = remainingWhite === 0 ? 'white' : 'black';
+        updatedPlayers.forEach((p) => {
+           if (p.assignedCoin === winningCoin) {
+             p.score += 5000; // Guaranteed win
+           }
+        });
+        handleGameOver(updatedPlayers);
+        return;
+      }
+    }
+
     const remainingBoardCoins = currentPieces.filter((p) => !p.isPocketed && p.type !== 'striker');
     if (remainingBoardCoins.length === 0) {
       handleGameOver(updatedPlayers);

@@ -15,6 +15,8 @@ import {
   Shield,
   Volume2,
   VolumeX,
+  Target,
+  Wifi,
 } from 'lucide-react';
 
 interface MainMenuProps {
@@ -26,6 +28,7 @@ interface MainMenuProps {
   onToggleSound: () => void;
   isMuted: boolean;
   userProfile: { name: string; avatar: string; score: number; queens: number };
+  onOpenMatchmaking?: () => void;
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -37,6 +40,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onToggleSound,
   isMuted,
   userProfile,
+  onOpenMatchmaking,
 }) => {
   return (
     <div className="relative h-[100dvh] min-h-[100dvh] w-full flex flex-col items-center justify-between p-3 sm:p-5 bg-[#0a0a0f] text-[#f3e5ab] overflow-y-auto overflow-x-hidden wood-pattern">
@@ -313,7 +317,36 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </div>
         </button>
 
-        {/* 6. Trick Shot Practice */}
+        {/* 6. Matchmaking / Room Code */}
+        <button
+          id="mode-matchmaking-btn"
+          onClick={() => {
+            soundManager.playButtonClick();
+            onOpenMatchmaking?.(); // We will need to add this prop
+          }}
+          className="relative flex flex-col p-4 rounded-2xl bg-gradient-to-b from-[#1c1a24] to-[#121118] border border-[#d4af37]/40 hover:border-[#d4af37] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition duration-300 text-left group overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 rounded-xl bg-[#2b1226] border border-[#e056fd]/40 text-[#e056fd]">
+              <Wifi className="w-5 h-5" />
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#e056fd]/20 text-[#e056fd] border border-[#e056fd]/30">
+              MULTIPLAYER
+            </span>
+          </div>
+          <h3 className="font-royal font-bold text-base text-[#f3e5ab] group-hover:text-[#ffdf73] transition">
+            Matchmaking Hub
+          </h3>
+          <p className="text-xs text-gray-400 mt-1 mb-4">
+            Generate a unique room code or join a friend's private lobby instantly.
+          </p>
+          <div className="mt-auto flex items-center gap-1.5 text-xs text-[#e056fd] font-semibold">
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Connect & Play</span>
+          </div>
+        </button>
+
+        {/* 7. Trick Shot Practice */}
         <button
           id="mode-practice-btn"
           onClick={() => {
@@ -324,7 +357,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         >
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 rounded-xl bg-[#1b263b] border border-[#64b5f6]/40 text-[#64b5f6]">
-              <Sparkles className="w-5 h-5" />
+              <Target className="w-5 h-5" />
             </div>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#64b5f6]/20 text-[#64b5f6] border border-[#64b5f6]/30">
               PRACTICE

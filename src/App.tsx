@@ -6,6 +6,8 @@ import { ProfileModal } from './components/ProfileModal';
 import { RulesModal } from './components/RulesModal';
 import { SettingsModal } from './components/SettingsModal';
 import { VictoryModal } from './components/VictoryModal';
+import { MatchmakingModal } from './components/MatchmakingModal';
+import { ColorSelectionPopup } from './components/ColorSelectionPopup';
 import { soundManager } from './audio/soundManager';
 
 const DEFAULT_SETTINGS: GameSettings = {
@@ -81,6 +83,8 @@ export default function App() {
   const [isMuted, setIsMuted] = useState<boolean>(soundManager.getMuted());
 
   // Modals state
+  const [isMatchmakingOpen, setIsMatchmakingOpen] = useState<boolean>(false);
+  const [colorPopupMode, setColorPopupMode] = useState<GameMode | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -126,12 +130,25 @@ export default function App() {
     if (!nextMuted) soundManager.playButtonClick();
   };
 
+  const [pendingBotDifficulty, setPendingBotDifficulty] = useState<BotDifficulty | undefined>();
+
   // Configure players setup based on selected mode
   const handleStartGame = (mode: GameMode, botDifficulty?: BotDifficulty) => {
+    if ((mode === '1v1' || mode === '2v2') && settings.enableCoinAssignment) {
+      setColorPopupMode(mode);
+      if (botDifficulty) setPendingBotDifficulty(botDifficulty);
+      return;
+    }
+    startGameWithColors(mode, true, botDifficulty);
+  };
+
+  const startGameWithColors = (mode: GameMode, assignColors: boolean, botDifficulty?: BotDifficulty) => {
     setCurrentMode(mode);
     if (botDifficulty) setCurrentBotDifficulty(botDifficulty);
 
     let playersList: Player[] = [];
+    const p1Coin = assignColors ? 'white' : 'any';
+    const p2Coin = assignColors ? 'black' : 'any';
 
     if (mode === 'vs_bot') {
       playersList = [
@@ -172,7 +189,7 @@ export default function App() {
           name: profile.name || 'Player 1',
           avatar: profile.avatar,
           side: 0, // South
-          assignedCoin: 'white',
+          assignedCoin: p1Coin,
           isBot: false,
           score: 0,
           coinsPocketed: { white: 0, black: 0, queen: 0 },
@@ -186,7 +203,7 @@ export default function App() {
           name: 'Player 2',
           avatar: '🦁',
           side: 2, // North
-          assignedCoin: 'black',
+          assignedCoin: p2Coin,
           isBot: false,
           score: 0,
           coinsPocketed: { white: 0, black: 0, queen: 0 },
@@ -308,7 +325,7 @@ export default function App() {
           avatar: profile.avatar,
           side: 0, // South
           team: 1,
-          assignedCoin: 'white',
+          assignedCoin: p1Coin,
           isBot: false,
           score: 0,
           coinsPocketed: { white: 0, black: 0, queen: 0 },
@@ -323,7 +340,7 @@ export default function App() {
           avatar: '🦁',
           side: 1, // East
           team: 2,
-          assignedCoin: 'black',
+          assignedCoin: p2Coin,
           isBot: false,
           score: 0,
           coinsPocketed: { white: 0, black: 0, queen: 0 },
@@ -338,7 +355,7 @@ export default function App() {
           avatar: '⚔️',
           side: 2, // North
           team: 1,
-          assignedCoin: 'white',
+          assignedCoin: p1Coin,
           isBot: false,
           score: 0,
           coinsPocketed: { white: 0, black: 0, queen: 0 },
@@ -353,7 +370,7 @@ export default function App() {
           avatar: '🦅',
           side: 3, // West
           team: 2,
-          assignedCoin: 'black',
+          assignedCoin: p2Coin,
           isBot: false,
           score: 0,
           coinsPocketed: { white: 0, black: 0, queen: 0 },
@@ -436,6 +453,7 @@ export default function App() {
           onToggleSound={handleToggleSound}
           isMuted={isMuted}
           userProfile={profile}
+          onOpenMatchmaking={() => setIsMatchmakingOpen(true)}
         />
       ) : (
         <GameBoard
@@ -468,6 +486,27 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onUpdateSettings={updateSettings}
+      />
+
+      <MatchmakingModal
+        isOpen={isMatchmakingOpen}
+        onClose={() => setIsMatchmakingOpen(false)}
+        onStartMatch={(mode) => {
+          setIsMatchmakingOpen(false);
+          handleStartGame(mode);
+        }}
+      />
+
+      <ColorSelectionPopup
+        isOpen={colorPopupMode !== null}
+        mode={colorPopupMode}
+        onClose={() => setColorPopupMode(null)}
+        onSelect={(assignColors) => {
+          if (colorPopupMode) {
+            startGameWithColors(colorPopupMode, assignColors, pendingBotDifficulty);
+            setColorPopupMode(null);
+          }
+        }}
       />
 
       <VictoryModal
