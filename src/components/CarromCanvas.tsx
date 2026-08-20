@@ -61,6 +61,8 @@ export const CarromCanvas: React.FC<CarromCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number | null>(null);
+  const pocketedIdsRef = useRef<Set<string>>(new Set());
+  const pocketGlowsRef = useRef<{ pocketId: number; color: string; life: number; type: string }[]>([]);
 
   // Add spark particles on heavy strike
   const addImpactSparks = useCallback((x: number, y: number, color: string = '#FFEAA7', count = 8) => {
@@ -116,6 +118,75 @@ export const CarromCanvas: React.FC<CarromCanvasProps> = ({
 
       // 3. Draw Deep 3D Pocket Wells and Braided Mesh Nets
       drawPockets(ctx, theme);
+
+      // Track newly pocketed pieces for premium glows
+      for (const p of [...pieces, striker]) {
+        if (p.isPocketed && p.pocketId !== undefined && !pocketedIdsRef.current.has(p.id)) {
+          pocketedIdsRef.current.add(p.id);
+          let glowColor = 'rgba(255, 255, 255, 0.9)'; // White
+          if (p.type === 'black') glowColor = 'rgba(20, 20, 20, 0.9)'; // Dark/Black
+          if (p.type === 'queen') glowColor = 'rgba(255, 77, 109, 0.9)'; // Reddish pink
+          if (p.type === 'striker') glowColor = 'rgba(212, 175, 55, 0.9)'; // Gold
+
+          pocketGlowsRef.current.push({
+            pocketId: p.pocketId,
+            color: glowColor,
+            life: 1.0,
+            type: p.type
+          });
+        }
+      }
+
+      // Draw premium pocket highlights
+      for (let i = pocketGlowsRef.current.length - 1; i >= 0; i--) {
+        const glow = pocketGlowsRef.current[i];
+        const pocket = POCKETS.find(p => p.id === glow.pocketId);
+        if (pocket) {
+          ctx.save();
+          // Animated pulsating scale based on life
+          const pulse = Math.sin((1 - glow.life) * Math.PI) * 15;
+          const outerRadius = pocket.radius + 15 + pulse;
+          
+          const grad = ctx.createRadialGradient(pocket.x, pocket.y, pocket.radius, pocket.x, pocket.y, outerRadius);
+          // Split alpha so it fades out
+          const alpha = Math.max(0, glow.life);
+          
+          let colorParts = glow.color.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
+          if (colorParts) {
+             const r = colorParts[1];
+             const g = colorParts[2];
+             const b = colorParts[3];
+             grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha * 0.8})`);
+             grad.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${alpha * 0.4})`);
+             grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+          } else {
+             // Fallback
+             grad.addColorStop(0, glow.color);
+             grad.addColorStop(1, 'rgba(0,0,0,0)');
+          }
+
+          ctx.beginPath();
+          ctx.arc(pocket.x, pocket.y, outerRadius, 0, Math.PI * 2);
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          // Add a sharp neon ring
+          if (colorParts) {
+            ctx.beginPath();
+            ctx.arc(pocket.x, pocket.y, pocket.radius + 5 + (1 - glow.life) * 10, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${colorParts[1]}, ${colorParts[2]}, ${colorParts[3]}, ${alpha})`;
+            ctx.lineWidth = 3 * alpha;
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        }
+        
+        glow.life -= 0.008; // Approx 1 second fade (1/60 * 66 frames = ~1 sec)
+        if (glow.life <= 0) {
+          pocketGlowsRef.current.splice(i, 1);
+        }
+      }
 
       // 4. Draw Baseline Placement highlight for current player
       if (status === 'placement' && !activePlayer.isBot) {
@@ -399,38 +470,59 @@ function drawFeltSurface(ctx: CanvasRenderingContext2D, theme: BoardTheme, activ
     }
   });
 
-  // --- Diagonal Corner Pocket Arrows ---
-  const arrowOrigins = [
-    { x: 130, y: 130, tx: 55, ty: 55 },
-    { x: 470, y: 130, tx: 545, ty: 55 },
-    { x: 470, y: 470, tx: 545, ty: 545 },
-    { x: 130, y: 470, tx: 55, ty: 545 },
+  // --- Diagonal Corner Pocket Arrows (Standard Carrom Design) ---
+  const diagonals = [
+    { signX: -1, signY: -1 }, // Top-Left
+    { signX: 1, signY: -1 },  // Top-Right
+    { signX: 1, signY: 1 },   // Bottom-Right
+    { signX: -1, signY: 1 },  // Bottom-Left
   ];
 
-  arrowOrigins.forEach((arrow) => {
+  diagonals.forEach((diag) => {
+    // Direction vector from center to corner
+    const dx = diag.signX;
+    const dy = diag.signY;
+    const dist = Math.hypot(dx, dy);
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    // Start point near the center mandala
+    const startDist = 95;
+    const startX = cx + nx * startDist;
+    const startY = cy + ny * startDist;
+
+    // End point near the pocket (pocket is at 42,42)
+    const pocketX = cx + nx * (cx - 55);
+    const pocketY = cy + ny * (cy - 55);
+
+    // Draw the long diagonal line
     ctx.beginPath();
-    ctx.moveTo(arrow.x, arrow.y);
-    ctx.lineTo(arrow.tx, arrow.ty);
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.5)';
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(pocketX, pocketY);
+    ctx.strokeStyle = theme.lineColor;
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Arrowhead
-    const angle = Math.atan2(arrow.ty - arrow.y, arrow.tx - arrow.x);
+    // Draw the small semi-circle base at the start of the diagonal
+    ctx.beginPath();
+    const angle = Math.atan2(ny, nx);
+    // Draw an arc centered slightly further in, facing the corner
+    ctx.arc(startX, startY, 12, angle - Math.PI / 2, angle + Math.PI / 2, true);
+    ctx.strokeStyle = theme.lineColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Draw the arrow inside/at the arc pointing to the pocket
     ctx.save();
-    ctx.translate(arrow.tx, arrow.ty);
+    ctx.translate(startX + nx * 6, startY + ny * 6);
     ctx.rotate(angle);
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(-12, -5);
-    ctx.lineTo(-8, 0);
-    ctx.lineTo(-12, 5);
+    ctx.lineTo(-8, -5);
+    ctx.lineTo(-8, 5);
     ctx.closePath();
-    ctx.fillStyle = '#C0392B';
+    ctx.fillStyle = theme.lineColor;
     ctx.fill();
-    ctx.strokeStyle = theme.lineColor;
-    ctx.lineWidth = 1;
-    ctx.stroke();
     ctx.restore();
   });
 }

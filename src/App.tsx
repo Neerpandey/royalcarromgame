@@ -10,6 +10,15 @@ import { MatchmakingModal } from './components/MatchmakingModal';
 import { ColorSelectionPopup } from './components/ColorSelectionPopup';
 import { soundManager } from './audio/soundManager';
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: Array<string>;
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 const DEFAULT_SETTINGS: GameSettings = {
   boardTheme: 'royal_emerald',
   strikerSkin: 'imperial_gold',
@@ -53,8 +62,19 @@ const DEFAULT_PROFILE: UserProfile = {
 export default function App() {
   const [view, setView] = useState<'menu' | 'game'>('menu');
   const [currentMode, setCurrentMode] = useState<GameMode>('vs_bot');
-  const [currentBotDifficulty, setCurrentBotDifficulty] = useState<BotDifficulty>('maharaja');
+  const [currentBotDifficulty, setCurrentBotDifficulty] = useState<BotDifficulty>('grandmaster');
   const [activePlayers, setActivePlayers] = useState<Player[]>([]);
+  
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
 
   // Persistent settings & profile with safe local fallback
   const [settings, setSettings] = useState<GameSettings>(() => {
@@ -171,7 +191,7 @@ export default function App() {
           name: botDifficulty === 'grandmaster' ? 'Grandmaster AI' : botDifficulty === 'rookie' ? 'Rookie Bot' : 'Maharaja Bot',
           avatar: '🤖',
           side: 2, // North
-          assignedCoin: 'black',
+          assignedCoin: p2Coin,
           isBot: true,
           botDifficulty: botDifficulty || 'maharaja',
           score: 0,
@@ -321,7 +341,7 @@ export default function App() {
       playersList = [
         {
           id: 'p1',
-          name: profile.name || 'Red Captain',
+          name: profile.name || 'Player 1',
           avatar: profile.avatar,
           side: 0, // South
           team: 1,
@@ -336,39 +356,9 @@ export default function App() {
         },
         {
           id: 'p2',
-          name: 'Gold Captain',
+          name: 'Player 2',
           avatar: '🦁',
-          side: 1, // East
-          team: 2,
-          assignedCoin: p2Coin,
-          isBot: false,
-          score: 0,
-          coinsPocketed: { white: 0, black: 0, queen: 0 },
-          fouls: 0,
-          penaltyDues: 0,
-          currentQueenNeedsCover: false,
-          coveredQueens: 0,
-        },
-        {
-          id: 'p3',
-          name: 'Red Partner',
-          avatar: '⚔️',
           side: 2, // North
-          team: 1,
-          assignedCoin: p1Coin,
-          isBot: false,
-          score: 0,
-          coinsPocketed: { white: 0, black: 0, queen: 0 },
-          fouls: 0,
-          penaltyDues: 0,
-          currentQueenNeedsCover: false,
-          coveredQueens: 0,
-        },
-        {
-          id: 'p4',
-          name: 'Gold Partner',
-          avatar: '🦅',
-          side: 3, // West
           team: 2,
           assignedCoin: p2Coin,
           isBot: false,
@@ -378,7 +368,7 @@ export default function App() {
           penaltyDues: 0,
           currentQueenNeedsCover: false,
           coveredQueens: 0,
-        },
+        }
       ];
     } else {
       // Practice Mode
@@ -454,6 +444,15 @@ export default function App() {
           isMuted={isMuted}
           userProfile={profile}
           onOpenMatchmaking={() => setIsMatchmakingOpen(true)}
+          canInstall={!!deferredPrompt}
+          onInstallClick={async () => {
+            if (!deferredPrompt) return;
+            await deferredPrompt.prompt();
+            const choice = await deferredPrompt.userChoice;
+            if (choice.outcome === 'accepted') {
+              setDeferredPrompt(null);
+            }
+          }}
         />
       ) : (
         <GameBoard

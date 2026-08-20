@@ -22,6 +22,8 @@ import { QueenCinematicOverlay, QueenCinematicEvent } from './QueenCinematicOver
 import {
   Volume2,
   VolumeX,
+  Menu,
+  X,
   Zap,
   ArrowLeft,
   Crown,
@@ -76,6 +78,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
   const [notifications, setNotifications] = useState<TurnNotification[]>([]);
   const [queenCinematicEvent, setQueenCinematicEvent] = useState<QueenCinematicEvent | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [turnTimeLeft, setTurnTimeLeft] = useState<number>(settings.turnTimeSeconds);
   const [isMuted, setIsMuted] = useState<boolean>(soundManager.getMuted());
   const [isBgmActive, setIsBgmActive] = useState<boolean>(settings.bgmEnabled);
@@ -309,7 +312,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     };
 
     const validity = isStrikerPositionValid(testStriker, pieces);
-    if (!validity.valid) {
+    if (!validity.valid && !activePlayer.isBot) {
       addNotification(validity.reason || 'Invalid striker position!', 'foul');
       soundManager.playFoulSound();
       return;
@@ -998,8 +1001,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           </div>
         </div>
 
-        {/* Audio & Settings Buttons */}
-        <div className="flex items-center gap-1">
+        {/* Audio & Settings Buttons - Desktop */}
+        <div className="hidden sm:flex items-center gap-1">
           <button
             id="carrom-bgm-toggle-btn"
             onClick={() => {
@@ -1017,7 +1020,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           >
             <Music className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
-
           <button
             id="carrom-sound-toggle-btn"
             onClick={toggleSound}
@@ -1026,7 +1028,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           >
             {isMuted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           </button>
-
           <button
             id="carrom-rules-btn"
             onClick={() => {
@@ -1038,7 +1039,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           >
             <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
-
           <button
             id="carrom-settings-btn"
             onClick={() => {
@@ -1051,7 +1051,44 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             <SettingsIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
+        
+        {/* Mobile Hamburger */}
+        <div className="flex sm:hidden items-center">
+          <button 
+            className="p-1.5 text-[#d4af37] bg-[#232738] border border-[#d4af37]/20 rounded-lg cursor-pointer"
+            onClick={() => { soundManager.playButtonClick(); setIsMobileMenuOpen(!isMobileMenuOpen); }}
+          >
+            {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+        </div>
       </header>
+      
+      {/* Mobile Menu Dropdown Overlay */}
+      {isMobileMenuOpen && (
+        <div className="sm:hidden absolute top-[48px] right-2 w-[180px] bg-[#171923]/95 backdrop-blur-xl border border-[#d4af37]/30 rounded-xl flex flex-col py-2 gap-1 z-50 shadow-2xl animate-in slide-in-from-top-2">
+          <button onClick={() => { 
+            const nextBgm = !isBgmActive;
+            setIsBgmActive(nextBgm);
+            soundManager.toggleBGM(nextBgm);
+            soundManager.playButtonClick();
+          }} className="flex items-center gap-3 px-4 py-2 hover:bg-[#202434] transition">
+            <Music className={`w-4 h-4 ${isBgmActive ? 'text-[#d4af37]' : 'text-gray-400'}`} />
+            <span className={`text-xs font-bold ${isBgmActive ? 'text-[#f3e5ab]' : 'text-gray-400'}`}>Ambient BGM</span>
+          </button>
+          <button onClick={toggleSound} className="flex items-center gap-3 px-4 py-2 hover:bg-[#202434] transition">
+            {isMuted ? <VolumeX className="w-4 h-4 text-[#d4af37]" /> : <Volume2 className="w-4 h-4 text-[#d4af37]" />}
+            <span className="text-xs font-bold text-[#f3e5ab]">SFX Sound</span>
+          </button>
+          <button onClick={() => { soundManager.playButtonClick(); onOpenRules(); setIsMobileMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-[#202434] transition">
+            <HelpCircle className="w-4 h-4 text-[#d4af37]" />
+            <span className="text-xs font-bold text-[#f3e5ab]">Rules</span>
+          </button>
+          <button onClick={() => { soundManager.playButtonClick(); onOpenSettings(); setIsMobileMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-[#202434] transition">
+            <SettingsIcon className="w-4 h-4 text-[#d4af37]" />
+            <span className="text-xs font-bold text-[#f3e5ab]">Settings</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Players HUD bar */}
       <div className="w-full max-w-4xl grid grid-cols-2 sm:grid-cols-4 gap-1.5 my-1 z-10 shrink-0 px-0.5">
