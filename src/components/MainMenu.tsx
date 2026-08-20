@@ -3,6 +3,7 @@ import { GameMode, BotDifficulty, GameSettings, Player } from '../types';
 import { BOARD_THEMES, STRIKER_SKINS } from '../data/carromConstants';
 import { soundManager } from '../audio/soundManager';
 import {
+  ArrowLeft,
   Crown,
   Users,
   Bot,
@@ -33,6 +34,7 @@ interface MainMenuProps {
   onOpenMatchmaking?: () => void;
   canInstall?: boolean;
   onInstallClick?: () => void;
+  onBackToHub?: () => void;
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -47,6 +49,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenMatchmaking,
   canInstall,
   onInstallClick,
+  onBackToHub,
 }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -59,6 +62,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {/* Top Navbar */}
       <nav className="w-full max-w-4xl flex items-center justify-between z-50 px-3 py-2 bg-[#12141c]/95 backdrop-blur-md rounded-2xl border border-[#d4af37]/20 shadow-xl shrink-0">
         <div className="flex items-center gap-2">
+          {onBackToHub && (
+            <button 
+              onClick={() => { soundManager.playButtonClick(); onBackToHub(); }}
+              className="p-1 mr-1 text-[#d4af37] bg-[#1a1c26] hover:bg-[#202434] border border-[#d4af37]/30 rounded-lg transition"
+              title="Back to Arcade"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
           <Crown className="w-5 h-5 text-[#d4af37]" />
           <span className="font-royal font-bold tracking-wider gold-gradient-text text-sm sm:text-base hidden xs:inline-block">Royal Carrom</span>
         </div>

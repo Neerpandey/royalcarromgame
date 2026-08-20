@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { GameMode, BotDifficulty, GameSettings, Player } from './types';
 import { MainMenu } from './components/MainMenu';
+import { HomeHub } from './components/HomeHub';
+import { XoMenu } from './components/xo/XoMenu';
+import { XoBoard } from './components/xo/XoBoard';
 import { GameBoard } from './components/GameBoard';
 import { ProfileModal } from './components/ProfileModal';
 import { RulesModal } from './components/RulesModal';
@@ -60,7 +63,7 @@ const DEFAULT_PROFILE: UserProfile = {
 };
 
 export default function App() {
-  const [view, setView] = useState<'menu' | 'game'>('menu');
+  const [view, setView] = useState<'hub' | 'carrom_menu' | 'carrom_game' | 'xo_menu' | 'xo_game'>('hub');
   const [currentMode, setCurrentMode] = useState<GameMode>('vs_bot');
   const [currentBotDifficulty, setCurrentBotDifficulty] = useState<BotDifficulty>('grandmaster');
   const [activePlayers, setActivePlayers] = useState<Player[]>([]);
@@ -392,7 +395,7 @@ export default function App() {
 
     setActivePlayers(playersList);
     setVictoryData({ isOpen: false, players: [] });
-    setView('game');
+    setView('carrom_game');
   };
 
   const handleGameOver = (
@@ -431,9 +434,21 @@ export default function App() {
     });
   };
 
+    const [xoMode, setXoMode] = useState<'1p'|'2p'>('1p');
+  const [xoGridSize, setXoGridSize] = useState<number>(3);
+  const [xoDifficulty, setXoDifficulty] = useState<'easy'|'medium'|'hard'|undefined>('medium');
+
   return (
     <div className="w-full h-[100dvh] min-h-[100dvh] max-h-[100dvh] bg-[#0a0a0f] text-[#f3e5ab] font-sans antialiased select-none overflow-hidden flex flex-col">
-      {view === 'menu' ? (
+      {view === 'hub' && (
+        <HomeHub 
+          userProfile={profile}
+          onLaunchCarrom={() => setView('carrom_menu')}
+          onLaunchXO={() => setView('xo_menu')}
+        />
+      )}
+      
+      {view === 'carrom_menu' && (
         <MainMenu
           settings={settings}
           onStartGame={handleStartGame}
@@ -453,17 +468,41 @@ export default function App() {
               setDeferredPrompt(null);
             }
           }}
+          onBackToHub={() => setView('hub')}
         />
-      ) : (
+      )}
+      
+      {view === 'carrom_game' && (
         <GameBoard
           key={`game-${currentMode}-${activePlayers.length}`}
           mode={currentMode}
           players={activePlayers}
           settings={settings}
-          onExitToMenu={() => setView('menu')}
+          onExitToMenu={() => setView('carrom_menu')}
           onOpenRules={() => setIsRulesOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onGameOver={handleGameOver}
+        />
+      )}
+
+      {view === 'xo_menu' && (
+        <XoMenu
+          onBack={() => setView('hub')}
+          onStart={(m, diff, size) => {
+            setXoMode(m);
+            setXoDifficulty(diff);
+            setXoGridSize(size || 3);
+            setView('xo_game');
+          }}
+        />
+      )}
+
+      {view === 'xo_game' && (
+        <XoBoard
+          mode={xoMode}
+          difficulty={xoDifficulty}
+          gridSize={xoGridSize}
+          onBack={() => setView('xo_menu')}
         />
       )}
 
@@ -515,7 +554,7 @@ export default function App() {
         onRematch={() => handleStartGame(currentMode, currentBotDifficulty)}
         onExitToMenu={() => {
           setVictoryData({ isOpen: false, players: [] });
-          setView('menu');
+          setView('carrom_menu');
         }}
       />
     </div>

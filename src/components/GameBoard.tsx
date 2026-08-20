@@ -186,24 +186,30 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       // Ultra-Fast local AI calculations (no external API calls needed)
       aiTimeoutRef.current = window.setTimeout(async () => {
-        const plan = await computeAIShot(activePlayer, pieces, activePlayer.botDifficulty || 'maharaja');
+        try {
+          const plan = await computeAIShot(activePlayer, pieces, activePlayer.botDifficulty || 'maharaja');
 
-        // Position striker immediately
-        setStriker((prev) => ({
-          ...prev,
-          x: plan.strikerPos.x,
-          y: plan.strikerPos.y,
-        }));
-        setAimAngle(plan.angle);
-        setAimPower(plan.power);
-        soundManager.playPlacementTick();
-        setAiThinkingText(plan.isBankShot ? '⚡ Fast Bank Shot' : '🎯 Target Locked');
+          // Position striker immediately
+          setStriker((prev) => ({
+            ...prev,
+            x: plan.strikerPos.x,
+            y: plan.strikerPos.y,
+          }));
+          setAimAngle(plan.angle);
+          setAimPower(plan.power);
+          soundManager.playPlacementTick();
+          setAiThinkingText(plan.isBankShot ? '⚡ Fast Bank Shot' : '🎯 Target Locked');
 
-        // Rapid strike release in 220ms
-        aiTimeoutRef.current = window.setTimeout(() => {
+          // Rapid strike release in 220ms
+          aiTimeoutRef.current = window.setTimeout(() => {
+            setAiThinkingText('');
+            executeStrike(plan.angle, plan.power, plan.strikerPos);
+          }, 220);
+        } catch (err) {
+          console.error("AI execution error:", err);
           setAiThinkingText('');
-          executeStrike(plan.angle, plan.power, plan.strikerPos);
-        }, 220);
+          executeStrike(0, 50);
+        }
       }, 140);
     }
 

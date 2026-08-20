@@ -322,55 +322,20 @@ export async function computeAIShot(
   if (candidates.length > 0) {
     let best = candidates[0];
 
-    // Attempt to use Gemini API to select the best shot among the top 5
-    try {
-      const topOptions = candidates.slice(0, 5);
-      
-      const boardState = {
-        whites: allPieces.filter(p => p.type === 'white' && !p.isPocketed).length,
-        blacks: allPieces.filter(p => p.type === 'black' && !p.isPocketed).length,
-        queenIsPocketed: allPieces.some(p => p.type === 'queen' && p.isPocketed),
-        botTeam: player.assignedCoin || 'any',
-      };
-
-      const res = await fetch('/api/bot-shot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          difficulty,
-          boardState,
-          options: topOptions.map(o => ({ reason: o.reason, score: o.score }))
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (typeof data.selectedIndex === 'number' && topOptions[data.selectedIndex]) {
-          best = topOptions[data.selectedIndex];
-          if (data.thought) {
-            best.reason = data.thought + ' - ' + best.reason;
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("Gemini API bot selection failed, falling back to pure physics selection", err);
-    }
-
-
-    // Apply difficulty noise
+    // Apply difficulty noise (Rookie: kum dangerous, Maharaja: moderate, Grandmaster: extremely dangerous & deadly precise)
     let angleNoise = 0;
     let powerNoise = 0;
 
     if (difficulty === 'rookie') {
-      angleNoise = (Math.random() - 0.5) * 0.14; // +/- 4 degrees
-      powerNoise = (Math.random() - 0.5) * 22;
+      angleNoise = (Math.random() - 0.5) * 0.22; // Loose accuracy (kum dangerous)
+      powerNoise = (Math.random() - 0.5) * 35;
     } else if (difficulty === 'maharaja') {
-      angleNoise = (Math.random() - 0.5) * 0.028; // +/- 0.8 degree
-      powerNoise = (Math.random() - 0.5) * 7;
+      angleNoise = (Math.random() - 0.5) * 0.04; // Moderate accuracy
+      powerNoise = (Math.random() - 0.5) * 12;
     } else {
-      // Grandmaster: Pinpoint Masterclass
-      angleNoise = (Math.random() - 0.5) * 0.006; // < 0.18 degree
-      powerNoise = (Math.random() - 0.5) * 2.5;
+      // Grandmaster: Extremely dangerous sniper precision
+      angleNoise = (Math.random() - 0.5) * 0.002; // Deadliest precision
+      powerNoise = (Math.random() - 0.5) * 1.5;
     }
 
     return {
