@@ -11,6 +11,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { VictoryModal } from './components/VictoryModal';
 import { MatchmakingModal } from './components/MatchmakingModal';
 import { ColorSelectionPopup } from './components/ColorSelectionPopup';
+import { AuthScreen } from './components/AuthScreen';
 import { soundManager } from './audio/soundManager';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -102,6 +103,21 @@ export default function App() {
       return DEFAULT_PROFILE;
     }
   });
+
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; avatar: string; phone?: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem('royal_carrom_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleSignOut = () => {
+    soundManager.playButtonClick();
+    localStorage.removeItem('royal_carrom_current_user');
+    setCurrentUser(null);
+  };
 
   const [isMuted, setIsMuted] = useState<boolean>(soundManager.getMuted());
 
@@ -440,13 +456,22 @@ export default function App() {
 
   return (
     <div className="w-full h-[100dvh] min-h-[100dvh] max-h-[100dvh] bg-[#0a0a0f] text-[#f3e5ab] font-sans antialiased select-none overflow-hidden flex flex-col">
-      {view === 'hub' && (
-        <HomeHub 
-          userProfile={profile}
-          onLaunchCarrom={() => setView('carrom_menu')}
-          onLaunchXO={() => setView('xo_menu')}
-        />
-      )}
+      {!currentUser ? (
+        <AuthScreen onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          handleSaveProfile(user.name, user.avatar);
+        }} />
+      ) : (
+        <>
+          {view === 'hub' && (
+            <HomeHub 
+              userProfile={profile}
+              currentUser={currentUser}
+              onSignOut={handleSignOut}
+              onLaunchCarrom={() => setView('carrom_menu')}
+              onLaunchXO={() => setView('xo_menu')}
+            />
+          )}
       
       {view === 'carrom_menu' && (
         <MainMenu
@@ -504,6 +529,8 @@ export default function App() {
           gridSize={xoGridSize}
           onBack={() => setView('xo_menu')}
         />
+      )}
+        </>
       )}
 
       {/* Global Modals */}

@@ -1,14 +1,17 @@
 import React from 'react';
-import { Play, Sparkles, Crown, Gem } from 'lucide-react';
+import { Play, Sparkles, Crown, LogOut, User } from 'lucide-react';
+import { motion } from 'motion/react';
 import { soundManager } from '../audio/soundManager';
 
 interface HomeHubProps {
   onLaunchCarrom: () => void;
   onLaunchXO: () => void;
   userProfile: any;
+  currentUser: any;
+  onSignOut: () => void;
 }
 
-export const HomeHub: React.FC<HomeHubProps> = ({ onLaunchCarrom, onLaunchXO, userProfile }) => {
+export const HomeHub: React.FC<HomeHubProps> = ({ onLaunchCarrom, onLaunchXO, userProfile, currentUser, onSignOut }) => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-4 sm:p-8 animate-in fade-in duration-700 overflow-y-auto relative">
       {/* Premium Background Elements */}
@@ -17,7 +20,27 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onLaunchCarrom, onLaunchXO, us
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#d4af37]/10 blur-[120px] rounded-full pointer-events-none mix-blend-screen"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#d4af37]/5 blur-[120px] rounded-full pointer-events-none mix-blend-screen"></div>
 
-      <div className="text-center mb-10 sm:mb-16 relative z-10 flex flex-col items-center">
+      {/* Top Header Profile & Premium Sign Out Button */}
+      <div className="absolute top-6 right-6 z-30 flex items-center gap-3 bg-[#13151f]/90 border border-[#d4af37]/30 px-4 py-2 rounded-2xl shadow-[0_5px_20px_rgba(0,0,0,0.5)] backdrop-blur-md">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#aa8022] flex items-center justify-center text-lg shadow-md">
+          {currentUser?.avatar || userProfile.avatar || '👑'}
+        </div>
+        <div className="hidden sm:block text-left">
+          <div className="text-xs font-black text-white">{currentUser?.name || userProfile.name}</div>
+          <div className="text-[10px] text-[#d4af37] font-bold">{currentUser?.email || 'Maharaja Member'}</div>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onSignOut}
+          className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 text-xs font-bold transition shadow-md"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">Sign Out</span>
+        </motion.button>
+      </div>
+
+      <div className="text-center mb-10 sm:mb-16 relative z-10 flex flex-col items-center mt-12 sm:mt-0">
         <div className="inline-flex items-center justify-center p-3 mb-4 rounded-full bg-[#151722] border border-[#d4af37]/30 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
            <Crown className="w-8 h-8 text-[#d4af37]" />
         </div>
@@ -25,7 +48,7 @@ export const HomeHub: React.FC<HomeHubProps> = ({ onLaunchCarrom, onLaunchXO, us
           ROYAL ARCADE
         </h1>
         <p className="text-[#f3e5ab] text-sm sm:text-xl font-medium opacity-90 max-w-lg mx-auto tracking-wide">
-          Welcome back, <span className="text-white font-bold">{userProfile.name}</span>. Choose your luxury experience.
+          Welcome back, <span className="text-white font-bold">{currentUser?.name || userProfile.name}</span>. Choose your luxury experience.
         </p>
       </div>
 
