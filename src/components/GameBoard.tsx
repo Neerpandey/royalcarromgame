@@ -185,8 +185,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       setAiThinkingText(`${activePlayer.name} aiming...`);
 
       // Ultra-Fast local AI calculations (no external API calls needed)
-      aiTimeoutRef.current = window.setTimeout(() => {
-        const plan = computeAIShot(activePlayer, pieces, activePlayer.botDifficulty || 'maharaja');
+      aiTimeoutRef.current = window.setTimeout(async () => {
+        const plan = await computeAIShot(activePlayer, pieces, activePlayer.botDifficulty || 'maharaja');
 
         // Position striker immediately
         setStriker((prev) => ({
@@ -435,9 +435,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       curPlayer.fouls += 1;
       curPlayer.currentCombo = 0;
 
-      // Dynamic Foul Points Deduction: >=100 pts -> -30 pts, >=50 pts -> -20 pts, <50 pts -> -10 pts
-      const ptsToDeduct =
-        curPlayer.score >= 100 ? 30 : curPlayer.score >= 50 ? 20 : Math.min(10, curPlayer.score);
+      // Striker Pocketed Foul: Fixed -50 pts
+      const ptsToDeduct = 50;
       curPlayer.score = Math.max(0, curPlayer.score - ptsToDeduct);
 
       // Penalty: Return 1 own pocketed coin to center if available
@@ -489,8 +488,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     // 2. Check Strict Foul: No pieces hit at all
     if (settings.strictFouls && hitPieceIds.length === 0) {
       soundManager.playFoulSound();
-      const ptsToDeduct =
-        curPlayer.score >= 100 ? 30 : curPlayer.score >= 50 ? 20 : Math.min(10, curPlayer.score);
+      const ptsToDeduct = 20;
       curPlayer.score = Math.max(0, curPlayer.score - ptsToDeduct);
       addNotification(`FOUL! No Pieces Hit (-${ptsToDeduct} Pts)`, 'foul', 'Missed shot penalty');
       curPlayer.fouls += 1;
@@ -537,8 +535,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     // Opponent Coin Pocketed Foul in Assigned Mode
     if (opponentCoinsSunk > 0 && assignedCoin !== 'any') {
       soundManager.playFoulSound();
-      const ptsToDeduct =
-        curPlayer.score >= 100 ? 30 : curPlayer.score >= 50 ? 20 : Math.min(10, curPlayer.score);
+      const ptsToDeduct = 20;
       curPlayer.score = Math.max(0, curPlayer.score - ptsToDeduct);
       curPlayer.fouls += 1;
       curPlayer.currentCombo = 0;

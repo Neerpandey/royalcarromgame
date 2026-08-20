@@ -135,13 +135,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       {/* Hero Title Section */}
       <div className="flex flex-col items-center text-center my-2 sm:my-4 z-10 shrink-0">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#1b1c24]/90 border border-[#d4af37]/40 shadow-inner mb-1.5">
-          <Sparkles className="w-3 h-3 text-[#d4af37]" />
-          <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#ffdf73]">
-            Ultra-Premium Indian Carrom
-          </span>
-        </div>
-
         <div className="relative flex items-center justify-center gap-3">
           <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] drop-shadow-[0_0_15px_rgba(212,175,55,0.6)] animate-pulse" />
           <h1 className="font-royal text-2xl sm:text-4xl lg:text-5xl font-black tracking-wider gold-gradient-text drop-shadow-[0_4px_20px_rgba(212,175,55,0.4)]">

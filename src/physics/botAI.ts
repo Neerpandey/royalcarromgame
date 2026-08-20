@@ -20,11 +20,11 @@ export interface AIShotPlan {
   reason?: string;
 }
 
-export function computeAIShot(
+export async function computeAIShot(
   player: Player,
   allPieces: Piece[],
   difficulty: BotDifficulty = 'maharaja'
-): AIShotPlan {
+): Promise<AIShotPlan> {
   const side = player.side;
   const baseline = BASELINES[side];
   const bounds = getLegalStrikerBounds(side);
@@ -320,7 +320,42 @@ export function computeAIShot(
   candidates.sort((a, b) => b.score - a.score);
 
   if (candidates.length > 0) {
-    const best = candidates[0];
+    let best = candidates[0];
+
+    // Attempt to use Gemini API to select the best shot among the top 5
+    try {
+      const topOptions = candidates.slice(0, 5);
+      
+      const boardState = {
+        whites: allPieces.filter(p => p.type === 'white' && !p.isPocketed).length,
+        blacks: allPieces.filter(p => p.type === 'black' && !p.isPocketed).length,
+        queenIsPocketed: allPieces.some(p => p.type === 'queen' && p.isPocketed),
+        botTeam: player.assignedCoin || 'any',
+      };
+
+      const res = await fetch('/api/bot-shot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          difficulty,
+          boardState,
+          options: topOptions.map(o => ({ reason: o.reason, score: o.score }))
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.selectedIndex === 'number' && topOptions[data.selectedIndex]) {
+          best = topOptions[data.selectedIndex];
+          if (data.thought) {
+            best.reason = data.thought + ' - ' + best.reason;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Gemini API bot selection failed, falling back to pure physics selection", err);
+    }
+
 
     // Apply difficulty noise
     let angleNoise = 0;
