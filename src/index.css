@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Outfit', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  h1, h2, h3, h4, .font-royal {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 18, 25, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: #d4af37;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f3e5ab;
+}
+
+/* Royal gold text & box glow */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #FFF6D1 0%, #D4AF37 50%, #AA7C11 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #996515 100%);
+}
+
+.gold-border {
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.gold-glow {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.25);
+}
+
+.wood-pattern {
+  background-color: #1a0f0a;
+  background-image: radial-gradient(#2b1810 15%, transparent 16%), radial-gradient(#20120b 15%, transparent 16%);
+  background-size: 60px 60px;
+  background-position: 0 0, 30px 30px;
+}
+
+@keyframes boardShake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-3px, 2px) rotate(-0.3deg); }
+  40% { transform: translate(3px, -2px) rotate(0.3deg); }
+  60% { transform: translate(-2px, -1px) rotate(-0.2deg); }
+  80% { transform: translate(2px, 1px) rotate(0.2deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.animate-shake {
+  animation: boardShake 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+

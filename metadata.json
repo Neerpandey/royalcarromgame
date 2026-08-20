@@ -1,0 +1,6 @@
+{
+  "name": "Royal Carrom: King's Strike",
+  "description": "An ultra-premium 2D physics Carrom game featuring luxury Indian aesthetic, 2 Queens rule, smart AI bot, 1v1, 3P, and 2v2 partnership modes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
