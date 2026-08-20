@@ -35,6 +35,7 @@ import {
   Flame,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { motion } from 'motion/react';
 
 interface GameBoardProps {
   mode: GameMode;
@@ -83,6 +84,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const [isMuted, setIsMuted] = useState<boolean>(soundManager.getMuted());
   const [isBgmActive, setIsBgmActive] = useState<boolean>(settings.bgmEnabled);
   const [isScreenShaking, setIsScreenShaking] = useState<boolean>(false);
+  const [scorePopups, setScorePopups] = useState<{ id: string; playerIndex: number; text: string; isPositive: boolean }[]>([]);
+
+  const showScorePopup = (playerIdx: number, delta: number) => {
+    if (delta === 0) return;
+    const popupId = Math.random().toString(36).substring(2, 9);
+    const text = delta > 0 ? `+${delta}` : `${delta}`;
+    const isPositive = delta > 0;
+
+    setScorePopups(curr => [...curr, { id: popupId, playerIndex: playerIdx, text, isPositive }]);
+    setTimeout(() => {
+      setScorePopups(curr => curr.filter(item => item.id !== popupId));
+    }, 1400);
+  };
 
   const isDraggingPlacement = useRef<boolean>(false);
   const isDraggingAim = useRef<boolean>(false);
@@ -443,7 +457,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       // Striker Pocketed Foul: Fixed -50 pts
       const ptsToDeduct = 50;
-      curPlayer.score = Math.max(0, curPlayer.score - ptsToDeduct);
+      curPlayer.score -= ptsToDeduct;
+      showScorePopup(activePlayerIndex, -ptsToDeduct);
 
       // Penalty: Return 1 own pocketed coin to center if available
       const ownPocketed = currentPieces.filter(
@@ -491,25 +506,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       return;
     }
 
-    // 2. Check Strict Foul: No pieces hit at all
-    if (settings.strictFouls && hitPieceIds.length === 0) {
-      soundManager.playFoulSound();
-      const ptsToDeduct = 20;
-      curPlayer.score = Math.max(0, curPlayer.score - ptsToDeduct);
-      addNotification(`FOUL! No Pieces Hit (-${ptsToDeduct} Pts)`, 'foul', 'Missed shot penalty');
-      curPlayer.fouls += 1;
-      curPlayer.currentCombo = 0;
 
-      if (curPlayer.currentQueenNeedsCover) {
-        returnPendingQueens(curPlayer, currentPieces, 'No pieces hit on cover');
-      }
-
-      updatedPlayers[activePlayerIndex] = curPlayer;
-      setPlayers(updatedPlayers);
-      setPieces([...currentPieces]);
-      endTurnAndSwitchPlayer(updatedPlayers, currentPieces, false);
-      return;
-    }
 
     // 3. Process Pocketed Coins (White 20 pts, Black 10 pts)
     for (const p of pocketedCoins) {
@@ -541,8 +538,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     // Opponent Coin Pocketed Foul in Assigned Mode
     if (opponentCoinsSunk > 0 && assignedCoin !== 'any') {
       soundManager.playFoulSound();
-      const ptsToDeduct = 20;
-      curPlayer.score = Math.max(0, curPlayer.score - ptsToDeduct);
+      const ptsToDeduct = 10;
+      curPlayer.score -= ptsToDeduct;
+      showScorePopup(activePlayerIndex, -ptsToDeduct);
       curPlayer.fouls += 1;
       curPlayer.currentCombo = 0;
       addNotification(
@@ -604,6 +602,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         curPlayer.currentQueenNeedsCover = false;
         curPlayer.coveredQueens += 1;
         curPlayer.score += settings.queenPoints;
+        showScorePopup(activePlayerIndex, settings.queenPoints);
         curPlayer.coinsPocketed.queen += 1;
         curPlayer.pendingQueenId = undefined;
         curPlayer.pendingQueenIds = [];
@@ -612,6 +611,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         if (curPlayer.coveredQueens >= 2) {
           // ROYAL DOUBLE EMPRESS BONUS!
           curPlayer.score += 25;
+          showScorePopup(activePlayerIndex, 25);
           setQueenCinematicEvent({
             type: 'double_empress',
             playerName: curPlayer.name,
@@ -651,11 +651,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       if (ownCoinsSunk > 0 || (assignedCoin === 'any' && (whiteSunk > 0 || blackSunk > 0))) {
         // Instant cover combo on the same turn!
         curPlayer.coveredQueens += queenSunk;
-        curPlayer.score += settings.queenPoints * queenSunk;
+        const instantPts = settings.queenPoints * queenSunk;
+        curPlayer.score += instantPts;
+        showScorePopup(activePlayerIndex, instantPts);
         curPlayer.coinsPocketed.queen += queenSunk;
 
         if (curPlayer.coveredQueens >= 2) {
           curPlayer.score += 25;
+          showScorePopup(activePlayerIndex, 25);
           setQueenCinematicEvent({
             type: 'double_empress',
             playerName: curPlayer.name,
@@ -724,6 +727,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     // Normal Points Award for remaining pocketed coins
     if (pointsThisTurn > 0) {
       curPlayer.score += pointsThisTurn;
+      showScorePopup(activePlayerIndex, pointsThisTurn);
       extraTurnEarned = true;
       addNotification(`+${pointsThisTurn} Pts Pocketed! Strike Again!`, 'strike');
     }
@@ -741,9 +745,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       if (remainingWhite === 0 || remainingBlack === 0) {
         // Find players of that color and give them a massive completion bonus to guarantee win
         const winningCoin = remainingWhite === 0 ? 'white' : 'black';
-        updatedPlayers.forEach((p) => {
+        updatedPlayers.forEach((p, pIdx) => {
            if (p.assignedCoin === winningCoin) {
              p.score += 5000; // Guaranteed win
+             showScorePopup(pIdx, 5000);
            }
         });
         handleGameOver(updatedPlayers);
@@ -765,14 +770,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     if (playersList.length === 2) {
       const oppIdx = activePlayerIndex === 0 ? 1 : 0;
       playersList[oppIdx].score += points;
+      showScorePopup(oppIdx, points);
       if (coinType === 'white') playersList[oppIdx].coinsPocketed.white += 1;
       else playersList[oppIdx].coinsPocketed.black += 1;
     } else if (mode === '2v2') {
       const curTeam = playersList[activePlayerIndex].team;
       const oppTeam = curTeam === 1 ? 2 : 1;
-      const oppPlayer = playersList.find((p) => p.team === oppTeam);
-      if (oppPlayer) {
-        oppPlayer.score += points;
+      const oppIdx = playersList.findIndex((p) => p.team === oppTeam);
+      if (oppIdx !== -1) {
+        playersList[oppIdx].score += points;
+        showScorePopup(oppIdx, points);
       }
     }
   };
@@ -1106,6 +1113,20 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   : 'bg-[#151722]/80 border-gray-800 opacity-75'
               }`}
             >
+              {/* Floating Score Animation Popup */}
+              {scorePopups.filter(sp => sp.playerIndex === idx).map(sp => (
+                <motion.div
+                  key={sp.id}
+                  initial={{ opacity: 0, y: 0, scale: 0.6 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: -26, scale: 1.25 }}
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                  className={`absolute right-2 -top-3 z-40 text-[11px] sm:text-xs font-black px-2 py-0.5 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.5)] ${
+                    sp.isPositive ? 'bg-emerald-500 text-white shadow-emerald-500/50' : 'bg-red-600 text-white shadow-red-600/50'
+                  }`}
+                >
+                  {sp.text}
+                </motion.div>
+              ))}
               <div className="relative shrink-0">
                 <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-[#2a2e42] border-2 border-[#d4af37] flex items-center justify-center text-sm sm:text-base overflow-hidden">
                   {p.avatar}
